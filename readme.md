@@ -1,7 +1,7 @@
 # 🚀 Tema WordPress para Búsqueda Forense
 
 ## Descripción General
-Tema personalizado de WordPress para documentación de búsqueda forense con capacidades de geolocalización.
+Tema personalizado de WordPress para documentación de búsqueda de desaparecidos con capacidades de geolocalización.
 
 ## Características Principales
 - Tipos de Post personalizados para registros forenses, fosas y evidencias

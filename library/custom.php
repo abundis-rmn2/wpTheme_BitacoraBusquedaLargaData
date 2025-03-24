@@ -18,7 +18,8 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'supports' => ['title', 'editor', 'thumbnail'],
-        'menu_icon' => 'dashicons-location-alt'
+        'menu_icon' => 'dashicons-location-alt',
+        'has_archive' => true  // Enable archive
     ]);
 
     // CPT Fosa
@@ -27,7 +28,8 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'supports' => ['title', 'editor', 'thumbnail'],
-        'menu_icon' => 'dashicons-marker'
+        'menu_icon' => 'dashicons-marker',
+        'has_archive' => true  // Enable archive
     ]);
 
     // CPT Indicio
@@ -36,7 +38,8 @@ add_action('init', function () {
         'public' => true,
         'show_in_rest' => true,
         'supports' => ['title', 'thumbnail'],
-        'menu_icon' => 'dashicons-tag'
+        'menu_icon' => 'dashicons-tag',
+        'has_archive' => true  // Enable archive
     ]);
 });
 
