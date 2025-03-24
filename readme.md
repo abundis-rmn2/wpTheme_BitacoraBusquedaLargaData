@@ -1,11 +1,71 @@
-## wp-pure
+# 🚀 Tema WordPress para Búsqueda Forense
 
-A simple WordPress theme development framework - with a few helpful built-in shortcodes, Sass, Minify, and everything you'll need to build a new theme.
+## Descripción General
+Tema personalizado de WordPress para documentación de búsqueda forense con capacidades de geolocalización.
 
-```shell
+## Características Principales
+- Tipos de Post personalizados para registros forenses, fosas y evidencias
+- Mapas interactivos con MapLibre + MapTiler
+- Geolocalización con integración Nominatim
+
+## Stack Tecnológico
+- WordPress 4.9.x+
+- MetaBox 5.8.1
+- MapLibre v3.3.0
+- MapTiler Cloud
+- Nominatim
+
+## Instalación
+```bash
 cd wp-content/themes/
-composer create-project jpederson/wp-pure
-npm install
+git clone <REPO_URL> forensic-theme
 ```
 
-Then, to start editing, just run `grunt`.
+## Configuración
+1. Activar tema
+2. Instalar plugin MetaBox
+3. Agregar clave API MapTiler en `/js/map.js`
+
+## Licencia
+GPL v2 - Código abierto para colectivos forenses
+
+## Autor
+Angel Javier Ramírez Abundis  
+Propósito: Plataforma de búsqueda forense para México
+
+---
+
+# 🚀 Forensic Search WordPress Theme
+
+## Overview
+Custom WordPress theme for forensic search documentation with geolocation capabilities.
+
+## Core Features
+- Custom Post Types for forensic logs, graves and evidence
+- Interactive maps with MapLibre + MapTiler
+- Geolocation with Nominatim integration
+
+## Tech Stack
+- WordPress 4.9.x+
+- MetaBox 5.8.1
+- MapLibre v3.3.0
+- MapTiler Cloud
+- Nominatim
+
+## Installation
+```bash
+cd wp-content/themes/
+git clone <REPO_URL> forensic-theme
+```
+
+## Configuration
+1. Activate theme
+2. Install MetaBox plugin
+3. Add MapTiler API key in `/js/map.js`
+
+## License
+GPL v2 - Open source for forensic collectives
+
+## Author
+Angel Javier Ramirez Abundis  
+Purpose: Forensic search platform for Mexico
