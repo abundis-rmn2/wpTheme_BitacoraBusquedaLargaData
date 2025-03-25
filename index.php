@@ -6,6 +6,7 @@ Home/catch-all template
 get_header(); 
 
 ?>
+<?php echo 'Template: ' . basename( get_page_template() ); ?>
 	<div class="content-wide" role="main">
 
 		<?php

@@ -2,7 +2,6 @@
 
 get_header();
 
-the_showcase();
 
 ?>
 

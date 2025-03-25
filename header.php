@@ -42,3 +42,5 @@
 
 <section class="content">
 	<a name="content"></a>
+	<p>header -> template:</p>
+	<?php echo basename( get_page_template() ); ?>

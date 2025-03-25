@@ -43,10 +43,17 @@ add_action('init', function () {
     ]);
 });
 
-// Zona taxonomy now applied to both bitacora and fosa
-register_taxonomy('zona', ['bitacora', 'fosa'], [
+register_taxonomy('zona', 'bitacora', [
     'label' => 'Zona de Reporte',
     'rewrite' => ['slug' => 'zona'],
+    'hierarchical' => true,
+    'show_in_rest' => true
+]);
+
+// Taxonomía para Fosas (Ej: Tipos de fosas)
+register_taxonomy('tipo_fosa', 'fosa', [
+    'label' => 'Tipo de Fosa',
+    'rewrite' => ['slug' => 'tipo-fosa'],
     'hierarchical' => true,
     'show_in_rest' => true
 ]);
