@@ -256,3 +256,221 @@ add_action('after_switch_theme', function () {
         set_theme_mod('nav_menu_locations', ['menu_principal' => $menu_id]);
     }
 });
+
+function tejer_red_test_api_connection() {
+    if (isset($_POST['tejer_red_test_api'])) {
+        $external_api_url = 'https://tejer.red/api/registrarInstancia.php';
+        $site_url = get_site_url();
+        $api_key = get_option('tejer_red_api_key');
+        
+        if (!$api_key) {
+            $api_key = wp_generate_password(32, true, true);
+            update_option('tejer_red_api_key', $api_key);
+        }
+        
+        $payload = [
+            'url'     => $site_url,
+            'api_key' => $api_key,
+            'endpoints' => []
+        ];
+        
+        // Asegúrate de incluir los endpoints configurados
+        $expuestos = get_option('tejer_red_endpoints_expuestos', []);
+        if ($expuestos['bitacoras'] ?? false) {
+            $payload['endpoints']['bitacoras'] = $site_url . '/wp-json/wp/v2/bitacora';
+        }
+        if ($expuestos['fosas'] ?? false) {
+            $payload['endpoints']['fosas'] = $site_url . '/wp-json/wp/v2/fosa';
+        }
+        if ($expuestos['indicios'] ?? false) {
+            $payload['endpoints']['indicios'] = $site_url . '/wp-json/wp/v2/indicio';
+        }
+
+        // Log para depuración
+        error_log('Enviando a API: ' . print_r($payload, true));
+        
+        $response = wp_remote_post($external_api_url, [
+            'method'  => 'POST',
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json'
+            ],
+            'body'    => json_encode($payload),
+            'sslverify' => false,
+            'timeout' => 15
+        ]);
+
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
+            error_log('Error de conexión: ' . $error_message);
+            echo '<div class="error"><p>Error de conexión a la API: ' . $error_message . '</p></div>';
+        } else {
+            $code = wp_remote_retrieve_response_code($response);
+            $body = wp_remote_retrieve_body($response);
+            error_log("Respuesta API: $code - $body");
+            
+            if ($code === 200) {
+                echo '<div class="updated"><p>Conexión exitosa a la API!</p></div>';
+            } else {
+                echo '<div class="error"><p>Error al conectar con la API. Código: ' . $code . ' - Mensaje: ' . esc_html($body) . '</p></div>';
+            }
+        }
+    }
+}
+
+add_action('admin_menu', function() {
+    add_options_page(
+        'Configuración de la API de Tejer',
+        'API de Tejer',
+        'manage_options',
+        'tejer_red_api_settings',
+        'tejer_red_api_settings_page'
+    );
+});
+
+// Página de configuración en el admin
+function tejer_red_api_settings_page() {
+    if (isset($_POST['tejer_red_api_settings_nonce']) && wp_verify_nonce($_POST['tejer_red_api_settings_nonce'], 'guardar_tejer_red_api_settings')) {
+        $expuestos = [
+            'bitacoras' => isset($_POST['exponer_bitacoras']) ? 1 : 0,
+            'fosas'     => isset($_POST['exponer_fosas'])     ? 1 : 0,
+            'indicios'  => isset($_POST['exponer_indicios'])  ? 1 : 0,
+        ];
+        update_option('tejer_red_endpoints_expuestos', $expuestos);
+        echo '<div class="updated"><p>Configuración guardada.</p></div>';
+    }
+
+    $expuestos = get_option('tejer_red_endpoints_expuestos', ['bitacoras' => 1, 'fosas' => 1, 'indicios' => 1]);
+    ?>
+    <div class="wrap">
+    <div class="wrap">
+        <h1>Configuración de API</h1>
+        <form method="POST" action="">
+            <p><strong>Prueba de Conexión a la API Externa</strong></p>
+            <input type="submit" name="tejer_red_test_api" class="button-primary" value="Probar Conexión">
+        </form>
+
+        <?php tejer_red_test_api_connection(); ?>
+    </div>
+        <h1>Tejer.Red – Configurar Endpoints Expuestos</h1>
+        <form method="POST">
+            <?php wp_nonce_field('guardar_tejer_red_api_settings', 'tejer_red_api_settings_nonce'); ?>
+            <fieldset>
+                <legend><strong>Selecciona qué endpoints exponer:</strong></legend>
+                <label><input type="checkbox" name="exponer_bitacoras" <?php checked($expuestos['bitacoras'], 1); ?>> Bitácoras</label><br>
+                <label><input type="checkbox" name="exponer_fosas" <?php checked($expuestos['fosas'], 1); ?>> Fosas</label><br>
+                <label><input type="checkbox" name="exponer_indicios" <?php checked($expuestos['indicios'], 1); ?>> Indicios</label><br>
+            </fieldset>
+            <br>
+            <input type="submit" class="button button-primary" value="Guardar configuración">
+        </form>
+
+        <h2>Acciones manuales</h2>
+        <form method="POST">
+            <?php wp_nonce_field('reenviar_config_tejer_red_nonce'); ?>
+            <input type="submit" name="reenviar_config_tejer_red" class="button button-secondary" value="Reenviar configuración a API externa">
+        </form>  
+
+        <?php
+        if (isset($_POST['reenviar_config_tejer_red']) && check_admin_referer('reenviar_config_tejer_red_nonce')) {
+            $resultado = tejer_red_registrar_api_externa();
+            if ($resultado === true) {
+                echo '<div class="updated"><p>Se reenvió la configuración a la API externa.</p></div>';
+            } else {
+                echo '<div class="error"><p>Error: ' . esc_html($resultado) . '</p></div>';
+            }
+        }
+        ?>
+    </div>
+    <?php
+}
+
+function generar_api_key_segura() {
+    $caracteres = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $api_key = '';
+    for ($i = 0; $i < 32; $i++) {
+        $api_key .= $caracteres[rand(0, strlen($caracteres) - 1)];
+    }
+    return $api_key;
+}
+function tejer_red_verificar_api_key() {
+    $api_key = get_option('tejer_red_api_key');
+    if (!$api_key) return false;
+    
+    // Verificar longitud
+    if (strlen($api_key) !== 32) {
+        error_log('API key longitud incorrecta: '.strlen($api_key));
+        return false;
+    }
+    
+    // Verificar caracteres
+    if (preg_match('/[^a-zA-Z0-9]/', $api_key)) {
+        error_log('API key contiene caracteres inválidos');
+        return false;
+    }
+    
+    return true;
+}
+
+// Usar en tu código:
+if (!tejer_red_verificar_api_key()) {
+    // Regenerar key inválida
+    update_option('tejer_red_api_key', generar_api_key_segura());
+}
+// Función central para registrar el sitio y exponer los endpoints
+function tejer_red_registrar_api_externa() {
+    $external_api_url = 'https://tejer.red/api/registrarInstancia.php';
+    $site_url = get_site_url();
+
+    // Generar clave si no existe
+    $api_key = get_option('tejer_red_api_key');
+    if (!$api_key) {
+        $api_key = generar_api_key_segura();
+        update_option('tejer_red_api_key', $api_key);
+    }
+
+    // Endpoints seleccionados
+    $seleccion = get_option('tejer_red_endpoints_expuestos', ['bitacoras' => 1, 'fosas' => 1, 'indicios' => 1]);
+
+    $endpoints = [];
+    if (!empty($seleccion['bitacoras'])) $endpoints['bitacoras'] = $site_url . '/wp-json/wp/v2/bitacora';
+    if (!empty($seleccion['fosas']))     $endpoints['fosas']     = $site_url . '/wp-json/wp/v2/fosa';
+    if (!empty($seleccion['indicios']))  $endpoints['indicios']  = $site_url . '/wp-json/wp/v2/indicio';
+
+    $payload = [
+        'url' => $site_url,
+        'api_key' => $api_key,
+        'endpoints' => $endpoints
+    ];
+
+    $response = wp_remote_post($external_api_url, [
+        'method'  => 'POST',
+        'headers' => ['Content-Type' => 'application/json'],
+        'body'    => json_encode($payload),
+        'sslverify' => false // ¡Solo para entornos de desarrollo!
+    ]);
+
+    if (is_wp_error($response)) {
+        return $response->get_error_message();
+    }
+
+    $code = wp_remote_retrieve_response_code($response);
+    return ($code === 200) ? true : "Respuesta HTTP: $code";
+}
+
+// Hooks: al activar tema, actualizar algo o por cron
+function tejer_red_hook_registro() {
+    tejer_red_registrar_api_externa();
+}
+add_action('after_switch_theme', 'tejer_red_hook_registro');
+add_action('upgrader_process_complete', function($upgrader_object, $options) {
+    if (isset($options['type']) && in_array($options['type'], ['plugin', 'theme', 'core'])) {
+        tejer_red_hook_registro();
+    }
+}, 10, 2);
+
+// Cron programado
+if (!wp_next_scheduled('tejer_red_cron_hook')) {
+    wp_schedule_event(time(), 'daily', 'tejer_red_cron_hook');
+}
+add_action('tejer_red_cron_hook', 'tejer_red_hook_registro');
