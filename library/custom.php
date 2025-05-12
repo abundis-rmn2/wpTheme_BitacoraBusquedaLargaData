@@ -1,5 +1,10 @@
 <?php
 
+// Cargar Meta Box como librería interna
+if ( file_exists( get_template_directory() . '/inc/meta-box/meta-box.php' ) ) {
+    require_once get_template_directory() . '/inc/meta-box/meta-box.php';
+}
+
 function enqueue_map_scripts() {
     // MapLibre
     wp_enqueue_style('maplibre-css', 'https://unpkg.com/maplibre-gl@3.3.0/dist/maplibre-gl.css');
@@ -193,5 +198,61 @@ add_action('save_post', function($post_id) {
     if (isset($_POST['latitud']) && isset($_POST['longitud'])) {
         update_post_meta($post_id, 'latitud', sanitize_text_field($_POST['latitud']));
         update_post_meta($post_id, 'longitud', sanitize_text_field($_POST['longitud']));
+    }
+});
+
+
+add_action('after_switch_theme', function () {
+    global $wp_rewrite;
+    $wp_rewrite->set_permalink_structure('/%postname%/');
+    $wp_rewrite->flush_rules();
+});
+
+
+add_action('after_setup_theme', function () {
+    register_nav_menu('menu_principal', 'Menú Principal');
+});
+
+add_action('after_switch_theme', function () {
+    $menu_name = 'Menú Principal';
+    $menu_exists = wp_get_nav_menu_object($menu_name);
+
+    if (!$menu_exists) {
+        // Crear menú
+        $menu_id = wp_create_nav_menu($menu_name);
+
+        // Agregar elementos
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Inicio',
+            'menu-item-url' => home_url('/'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Noticias',
+            'menu-item-url' => home_url('/#'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Indicios',
+            'menu-item-url' => home_url('/indicio/'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Fosas',
+            'menu-item-url' => home_url('/fosa/'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Contacto',
+            'menu-item-url' => home_url('/#'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        // Asignar menú a ubicación del tema
+        set_theme_mod('nav_menu_locations', ['menu_principal' => $menu_id]);
     }
 });

@@ -35,7 +35,7 @@
 
 	<nav>
 		<button class="menu-toggle">Show/hide Menu</button>
-		<?php wp_nav_menu( array( 'theme_location' => 'main-menu', 'menu_class' => 'nav-menu' ) ); ?>
+		<?php wp_nav_menu( array( 'theme_location' => 'menu_principal', 'menu_class' => 'nav-menu' ) ); ?>
 	</nav>
 	
 </header>
