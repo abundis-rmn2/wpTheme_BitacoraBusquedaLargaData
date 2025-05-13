@@ -173,22 +173,21 @@ add_filter('rwmb_meta_boxes', function ($meta_boxes) {
 // ===========================
 // ✅ Exponer MetaBox en la API REST
 // ===========================
-/*
-add_filter('rest_prepare_bitacora', function ($response, $post) {
-    $response->data['meta'] = get_post_meta($post->ID);
-    return $response;
-}, 10, 2);
 
-add_filter('rest_prepare_fosa', function ($response, $post) {
-    $response->data['meta'] = get_post_meta($post->ID);
-    return $response;
-}, 10, 2);
-
-add_filter('rest_prepare_indicio', function ($response, $post) {
-    $response->data['meta'] = get_post_meta($post->ID);
-    return $response;
-}, 10, 2);
-*/
+// Exponer meta fields en REST API
+function expose_custom_fields() {
+    $post_types = ['bitacora', 'fosa', 'indicio'];
+    
+    foreach ($post_types as $pt) {
+        register_rest_field($pt, 'meta', [
+            'get_callback' => function($post) {
+                return get_post_meta($post['id']);
+            },
+            'schema' => null
+        ]);
+    }
+}
+add_action('rest_api_init', 'expose_custom_fields');
 
 // ✅ Save coordinates when post is saved
 add_action('save_post', function($post_id) {
