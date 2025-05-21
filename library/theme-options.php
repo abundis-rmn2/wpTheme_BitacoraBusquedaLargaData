@@ -39,6 +39,8 @@ add_action('admin_enqueue_scripts', function($hook) {
     if ($hook === 'toplevel_page_configuraciones') {
         wp_enqueue_media();
         wp_enqueue_script('jquery');
+        wp_enqueue_style('wp-color-picker');
+        wp_enqueue_script('wp-color-picker');
     }
 });
 
@@ -54,9 +56,29 @@ function configuraciones_page() {
         }
     }
 
+    // Handle color save
+    if (isset($_POST['submit_colors']) && check_admin_referer('guardar_colores_nonce', 'guardar_colores_nonce_field')) {
+        update_option('theme_color_principal', sanitize_hex_color($_POST['color_principal']));
+        update_option('theme_color_secundario', sanitize_hex_color($_POST['color_secundario']));
+        update_option('theme_color_base', sanitize_hex_color($_POST['color_base']));
+
+        // Generate custom.css file
+        generate_dynamic_css();
+
+        echo '<div class="updated"><p>Colores guardados correctamente.</p></div>';
+    }
+
     // Get current logo
     $logo_id = get_option('theme_logo');
     $logo_url = $logo_id ? wp_get_attachment_url($logo_id) : '';
+
+    // Get current colors
+    $color_principal = get_option('theme_color_principal', '#000000');
+    $color_secundario = get_option('theme_color_secundario', '#ffffff');
+    $color_base = get_option('theme_color_base', '#cccccc');
+
+    // URL to view the custom.css file
+    $custom_css_url = get_template_directory_uri() . '/css/custom.css';
 
     // Display form
     ?>
@@ -79,6 +101,26 @@ function configuraciones_page() {
             </p>
         </fieldset>
     </form>
+    <form method="POST">
+        <?php wp_nonce_field('guardar_colores_nonce', 'guardar_colores_nonce_field'); ?>
+        <fieldset>
+            <legend><strong>Configurar Colores:</strong></legend>
+            <p>
+                <label for="color_principal">Color Principal:</label><br>
+                <input type="text" id="color_principal" name="color_principal" value="<?php echo esc_attr($color_principal); ?>" class="color-picker" data-default-color="#000000">
+            </p>
+            <p>
+                <label for="color_secundario">Color Secundario:</label><br>
+                <input type="text" id="color_secundario" name="color_secundario" value="<?php echo esc_attr($color_secundario); ?>" class="color-picker" data-default-color="#ffffff">
+            </p>
+            <p>
+                <label for="color_base">Color Base:</label><br>
+                <input type="text" id="color_base" name="color_base" value="<?php echo esc_attr($color_base); ?>" class="color-picker" data-default-color="#cccccc">
+            </p>
+            <p><input type="submit" name="submit_colors" class="button button-primary" value="Guardar Colores"></p>
+        </fieldset>
+    </form>
+    <p><a href="<?php echo esc_url($custom_css_url); ?>" target="_blank" class="button">Ver custom.css</a></p>
     <script>
         jQuery(document).ready(function($) {
             let mediaUploader;
@@ -109,10 +151,108 @@ function configuraciones_page() {
                 });
                 mediaUploader.open();
             });
+
+            $('.color-picker').wpColorPicker();
         });
     </script>
     <?php
 }
+
+function generate_dynamic_css() {
+    $color_principal = get_option('theme_color_principal', '#000000');
+    $color_secundario = get_option('theme_color_secundario', '#ffffff');
+    $color_base = get_option('theme_color_base', '#cccccc');
+
+    $css_content = "
+    /* Custom Theme Colors */
+    :root {
+        --color-principal: {$color_principal};
+        --color-secundario: {$color_secundario};
+        --color-base: {$color_base};
+    }
+
+    body > div > * h1 {
+        color: var(--color-principal);
+    }
+
+    /* Elements using color-principal */
+    h1 {
+        color: var(--color-principal);
+    }
+
+    body > * a {
+        color: var(--color-principal);
+        text-decoration: none;
+    }
+
+    body > * a:hover {
+        color: var(--color-principal);
+        text-decoration: underline;
+    }
+
+    ul#menu-menu-principal.nav-menu {
+        background: var(--color-principal);
+    }
+
+    ul#menu-menu-principal.nav-menu li:hover a, ul#menu-menu-principal.nav-menu li.open a {
+    background-color: #20202047;
+        }
+    .gform_wrapper input:not([type=radio]):not([type=checkbox]):not([type=submit]):not([type=button]):not([type=image]):not([type=file]):focus,
+    .gform_wrapper textarea:focus {
+        border: 3px solid var(--color-principal);
+    }
+
+    .gform_wrapper span.ginput_total {
+        color: var(--color-principal);
+    }
+
+    .quarter.sidebar .widget_nav_menu ul li a:hover {
+        color: var(--color-principal);
+    }
+
+    .gform_wrapper .gform_footer input[type=submit],
+    .gform_wrapper .gform_footer input[type=button],
+    .gform_wrapper .gform_footer input[type=reset],
+    .gform_wrapper .gform_footer button {
+        background-color: var(--color-principal);
+    }
+    ";
+
+    $css_dir = get_template_directory() . '/css';
+    $css_file = $css_dir . '/custom.css';
+
+    // Ensure the directory exists
+    if (!file_exists($css_dir)) {
+        if (!mkdir($css_dir, 0755, true)) {
+            error_log("Error: Could not create directory {$css_dir}. Check permissions.");
+            return;
+        }
+    }
+
+    // Check if the directory is writable
+    if (!is_writable($css_dir)) {
+        error_log("Error: Directory {$css_dir} is not writable. Check permissions.");
+        return;
+    }
+
+    // Write the CSS file
+    if (file_put_contents($css_file, $css_content) === false) {
+        error_log("Error: Could not write to file {$css_file}. Check permissions.");
+    } else {
+        error_log("Success: custom.css file created at {$css_file}");
+    }
+}
+
+function enqueue_custom_css_if_exists() {
+    $css_file_path = get_template_directory() . '/css/custom.css';
+    $css_file_url = get_template_directory_uri() . '/css/custom.css';
+
+    // Check if the file exists before enqueuing
+    if (file_exists($css_file_path)) {
+        wp_enqueue_style('custom-css', $css_file_url, [], null, 'all');
+    }
+}
+add_action('wp_enqueue_scripts', 'enqueue_custom_css_if_exists', 100); // Priority 100 to ensure it loads last
 
 function conf_graficas_page() {
     echo '<h1>Configuración de Gráficas</h1>';

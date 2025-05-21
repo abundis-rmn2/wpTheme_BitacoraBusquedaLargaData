@@ -31,9 +31,9 @@
 				$custom_logo_id = get_option('theme_logo');
 				$custom_logo_url = $custom_logo_id ? wp_get_attachment_url($custom_logo_id) : '';
 				if ($custom_logo_url): ?>
-					<img src="<?php echo esc_url($custom_logo_url); ?>" alt="<?php bloginfo( 'name' ); ?>" style="max-width: 300px; height: auto;">
+					<img src="<?php echo esc_url($custom_logo_url); ?>" alt="<?php bloginfo( 'name' ); ?>" style="max-width: 200px; height: auto;">
 				<?php else: ?>
-					<img src="<?php bloginfo( "template_url" ) ?>/img/logo.png" alt="<?php bloginfo( 'name' ); ?>" style="max-width: 300px; height: auto;">
+					<img src="<?php bloginfo( "template_url" ) ?>/img/logo.png" alt="<?php bloginfo( 'name' ); ?>" style="max-width: 200px; height: auto;">
 				<?php endif; ?>
 			</a>
 		</div>
