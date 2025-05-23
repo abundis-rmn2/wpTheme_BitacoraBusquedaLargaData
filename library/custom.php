@@ -1,5 +1,10 @@
 <?php
 
+// Cargar Meta Box como librería interna
+if ( file_exists( get_template_directory() . '/inc/meta-box/meta-box.php' ) ) {
+    require_once get_template_directory() . '/inc/meta-box/meta-box.php';
+}
+
 function enqueue_map_scripts() {
     // MapLibre
     wp_enqueue_style('maplibre-css', 'https://unpkg.com/maplibre-gl@3.3.0/dist/maplibre-gl.css');
@@ -194,4 +199,175 @@ add_action('save_post', function($post_id) {
         update_post_meta($post_id, 'latitud', sanitize_text_field($_POST['latitud']));
         update_post_meta($post_id, 'longitud', sanitize_text_field($_POST['longitud']));
     }
+});
+
+
+add_action('after_switch_theme', function () {
+    global $wp_rewrite;
+    $wp_rewrite->set_permalink_structure('/%postname%/');
+    $wp_rewrite->flush_rules();
+});
+
+
+add_action('after_setup_theme', function () {
+    register_nav_menu('menu_principal', 'Menú Principal');
+});
+
+add_action('after_switch_theme', function () {
+    $menu_name = 'Menú Principal';
+    $menu_exists = wp_get_nav_menu_object($menu_name);
+
+    if (!$menu_exists) {
+        // Crear menú
+        $menu_id = wp_create_nav_menu($menu_name);
+
+        // Agregar elementos
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Inicio',
+            'menu-item-url' => home_url('/'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Noticias',
+            'menu-item-url' => home_url('/#'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Indicios',
+            'menu-item-url' => home_url('/indicio/'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Fosas',
+            'menu-item-url' => home_url('/fosa/'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        wp_update_nav_menu_item($menu_id, 0, [
+            'menu-item-title' => 'Contacto',
+            'menu-item-url' => home_url('/#'),
+            'menu-item-status' => 'publish'
+        ]);
+
+        // Asignar menú a ubicación del tema
+        set_theme_mod('nav_menu_locations', ['menu_principal' => $menu_id]);
+    }
+});
+
+function generar_api_key_segura() {
+    $caracteres = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $api_key = '';
+    for ($i = 0; $i < 32; $i++) {
+        $api_key .= $caracteres[rand(0, strlen($caracteres) - 1)];
+    }
+    return $api_key;
+}
+function tejer_red_verificar_api_key() {
+    $api_key = get_option('tejer_red_api_key');
+    if (!$api_key) return false;
+    
+    // Verificar longitud
+    if (strlen($api_key) !== 32) {
+        error_log('API key longitud incorrecta: '.strlen($api_key));
+        return false;
+    }
+    
+    // Verificar caracteres
+    if (preg_match('/[^a-zA-Z0-9]/', $api_key)) {
+        error_log('API key contiene caracteres inválidos');
+        return false;
+    }
+    
+    return true;
+}
+
+// Usar en tu código:
+if (!tejer_red_verificar_api_key()) {
+    // Regenerar key inválida
+    update_option('tejer_red_api_key', generar_api_key_segura());
+}
+// Función central para registrar el sitio y exponer los endpoints
+function tejer_red_registrar_api_externa() {
+    $external_api_url = get_option('tejer_red_external_api_url', 'http://192.168.1.71:9999/instancias.php');
+    $site_url = get_site_url();
+
+    // Generar clave si no existe
+    $api_key = get_option('tejer_red_api_key');
+    if (!$api_key) {
+        $api_key = generar_api_key_segura();
+        update_option('tejer_red_api_key', $api_key);
+    }
+
+    // Endpoints seleccionados
+    $seleccion = get_option('tejer_red_endpoints_expuestos', ['bitacoras' => 1, 'fosas' => 1, 'indicios' => 1]);
+
+    $endpoints = [];
+    if (!empty($seleccion['bitacoras'])) $endpoints['bitacoras'] = $site_url . '/wp-json/wp/v2/bitacora';
+    if (!empty($seleccion['fosas']))     $endpoints['fosas']     = $site_url . '/wp-json/wp/v2/fosa';
+    if (!empty($seleccion['indicios']))  $endpoints['indicios']  = $site_url . '/wp-json/wp/v2/indicio';
+
+    $payload = [
+        'url' => $site_url,
+        'api_key' => $api_key,
+        'endpoints' => $endpoints
+    ];
+
+    $response = wp_remote_post($external_api_url, [
+        'method'  => 'POST',
+        'headers' => ['Content-Type' => 'application/json'],
+        'body'    => json_encode($payload),
+        'sslverify' => false // ¡Solo para entornos de desarrollo!
+    ]);
+
+    if (is_wp_error($response)) {
+        return $response->get_error_message();
+    }
+
+    $code = wp_remote_retrieve_response_code($response);
+    return ($code === 200) ? true : "Respuesta HTTP: $code";
+}
+
+// Hooks: al activar tema, actualizar algo o por cron
+function tejer_red_hook_registro() {
+    tejer_red_registrar_api_externa();
+}
+add_action('after_switch_theme', 'tejer_red_hook_registro');
+add_action('upgrader_process_complete', function($upgrader_object, $options) {
+    if (isset($options['type']) && in_array($options['type'], ['plugin', 'theme', 'core'])) {
+        tejer_red_hook_registro();
+    }
+}, 10, 2);
+
+// Cron programado
+if (!wp_next_scheduled('tejer_red_cron_hook')) {
+    wp_schedule_event(time(), 'daily', 'tejer_red_cron_hook');
+}
+add_action('tejer_red_cron_hook', 'tejer_red_hook_registro');
+
+// ✅ Custom REST API Endpoint
+add_action('rest_api_init', function () {
+    error_log('Registrando endpoint '); // Mensaje de depuración
+    register_rest_route('personalizado/v1', '/info/(?P<post_type>[a-zA-Z0-9_-]+)/(?P<id>\d+)', [
+        'methods'  => WP_REST_Server::READABLE,
+        'callback' => function ($data) {
+            $post_type = sanitize_text_field($data['post_type']);
+            $post_id = intval($data['id']);
+
+            if (!post_type_exists($post_type)) {
+                return new WP_Error('invalid_post_type', 'Invalid post type', ['status' => 404]);
+            }
+
+            $post = get_post($post_id);
+            if (!$post || $post->post_type !== $post_type) {
+                return new WP_Error('invalid_post', 'Invalid post ID or post type mismatch', ['status' => 404]);
+            }
+
+            $meta = get_post_meta($post_id);
+            return rest_ensure_response($meta);
+        },
+        'permission_callback' => '__return_true',
+    ]);
 });

@@ -380,28 +380,6 @@ header {
     position: relative
 }
 
-header .logo {
-    padding: 20px
-}
-
-@media only screen and (min-width: 768px) {
-    header .logo {
-        padding:20px 30px
-    }
-}
-
-@media only screen and (min-width: 1024px) {
-    header .logo {
-        padding:20px 40px
-    }
-}
-
-@media only screen and (min-width: 1150px) {
-    header .logo {
-        padding:25px 50px
-    }
-}
-
 header nav {
     zoom:1;position: relative
 }
@@ -1398,4 +1376,30 @@ img.mfp-img {
     top: 0;
     right: 0;
     padding-top: 0
+}
+
+header > .wrap{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+ul#menu-menu-principal.nav-menu {
+    display: flex
+;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: space-between;
+    align-items: center;
+}
+
+@media only screen and (max-width: 768px) {
+    ul#menu-menu-principal.nav-menu {
+        flex-direction: column;
+    }
 }

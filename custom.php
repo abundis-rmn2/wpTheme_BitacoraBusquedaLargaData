@@ -1,5 +1,5 @@
 <?php
-
+/*
 function enqueue_map_scripts() {
     // MapLibre
     wp_enqueue_style('maplibre-css', 'https://unpkg.com/maplibre-gl@3.3.0/dist/maplibre-gl.css');
@@ -173,22 +173,60 @@ add_filter('rwmb_meta_boxes', function ($meta_boxes) {
 // ===========================
 // ✅ Exponer MetaBox en la API REST
 // ===========================
-/*
-add_filter('rest_prepare_bitacora', function ($response, $post) {
-    $response->data['meta'] = get_post_meta($post->ID);
-    return $response;
-}, 10, 2);
 
-add_filter('rest_prepare_fosa', function ($response, $post) {
-    $response->data['meta'] = get_post_meta($post->ID);
-    return $response;
-}, 10, 2);
+// Exponer meta fields en REST API
+function expose_custom_fields() {
+    $post_types = ['bitacora', 'fosa', 'indicio'];
+    
+    foreach ($post_types as $pt) {
+        register_rest_field($pt, 'meta', [
+            'get_callback' => function($post) {
+                return get_post_meta($post['id']);
+            },
+            'schema' => null
+        ]);
+    }
+}
+add_action('rest_api_init', 'expose_custom_fields');
 
-add_filter('rest_prepare_indicio', function ($response, $post) {
-    $response->data['meta'] = get_post_meta($post->ID);
-    return $response;
-}, 10, 2);
-*/
+// ✅ Expose meta information via custom REST API endpoint
+add_action('rest_api_init', function () {
+    register_rest_route('custom/v1', '/meta/(?P<post_type>[a-zA-Z0-9_-]+)/(?P<id>\d+)', [
+        'methods'  => WP_REST_Server::READABLE, // Use constant for GET requests
+        'callback' => function ($data) {
+            $post_type = sanitize_text_field($data['post_type']);
+            $post_id = intval($data['id']);
+
+            // Validate post type
+            if (!post_type_exists($post_type)) {
+                return new WP_Error('invalid_post_type', 'Invalid post type', ['status' => 404]);
+            }
+
+            // Validate post existence and type
+            $post = get_post($post_id);
+            if (!$post || $post->post_type !== $post_type) {
+                return new WP_Error('invalid_post', 'Invalid post ID or post type mismatch', ['status' => 404]);
+            }
+
+            // Retrieve meta data
+            $meta = get_post_meta($post_id);
+            return rest_ensure_response($meta);
+        },
+        'args' => [
+            'post_type' => [
+                'validate_callback' => function ($param) {
+                    return post_type_exists($param);
+                }
+            ],
+            'id' => [
+                'validate_callback' => function ($param) {
+                    return is_numeric($param) && get_post($param);
+                }
+            ]
+        ],
+        'permission_callback' => '__return_true', // Allow public access
+    ]);
+});
 
 // ✅ Save coordinates when post is saved
 add_action('save_post', function($post_id) {

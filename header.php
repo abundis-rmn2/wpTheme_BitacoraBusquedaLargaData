@@ -6,7 +6,7 @@
 <meta charset="<?php bloginfo( 'charset' ); ?>" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-<title><?php wp_title( '|', true, 'right' ); ?> <?php bloginfo( 'sitename' ) ?></title>
+<title><?php wp_title( '|', true, 'right' ); ?> <?php bloginfo( 'sitename' ) ?> | <?php bloginfo( 'description' ); ?></title>
 
 <link rel="profile" href="http://gmpg.org/xfn/11" />
 <link rel="pingback" href="<?php bloginfo( 'pingback_url' ); ?>" />
@@ -27,15 +27,28 @@
 	
 		<div class="logo">
 			<a href="/" title="<?php echo esc_attr( get_bloginfo( 'name', 'display' ) ); ?>" rel="home">
-				<img src="<?php bloginfo( "template_url" ) ?>/img/logo.png" alt="<?php bloginfo( 'name' ); ?>">
+				<?php 
+				$custom_logo_id = get_option('theme_logo');
+				$custom_logo_url = $custom_logo_id ? wp_get_attachment_url($custom_logo_id) : '';
+				if ($custom_logo_url): ?>
+					<img src="<?php echo esc_url($custom_logo_url); ?>" alt="<?php bloginfo( 'name' ); ?>" style="max-width: 200px; height: auto;">
+				<?php else: ?>
+					<img src="<?php bloginfo( "template_url" ) ?>/img/logo.png" alt="<?php bloginfo( 'name' ); ?>" style="max-width: 200px; height: auto;">
+				<?php endif; ?>
 			</a>
+		</div>
+
+		<div class="header-widget-area">
+			<?php if ( is_active_sidebar( 'header-widget' ) ) : ?>
+				<?php dynamic_sidebar( 'header-widget' ); ?>
+			<?php endif; ?>
 		</div>
 
 	</div>
 
 	<nav>
 		<button class="menu-toggle">Show/hide Menu</button>
-		<?php wp_nav_menu( array( 'theme_location' => 'main-menu', 'menu_class' => 'nav-menu' ) ); ?>
+		<?php wp_nav_menu( array( 'theme_location' => 'menu_principal', 'menu_class' => 'nav-menu' ) ); ?>
 	</nav>
 	
 </header>
