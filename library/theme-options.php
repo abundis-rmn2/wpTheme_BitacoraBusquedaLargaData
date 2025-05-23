@@ -56,6 +56,12 @@ function configuraciones_page() {
         }
     }
 
+    // Handle logo removal
+    if (isset($_POST['remove_logo']) && check_admin_referer('guardar_logo_nonce', 'guardar_logo_nonce_field')) {
+        delete_option('theme_logo');
+        echo '<div class="updated"><p>Logotipo eliminado correctamente.</p></div>';
+    }
+
     // Handle color save
     if (isset($_POST['submit_colors']) && check_admin_referer('guardar_colores_nonce', 'guardar_colores_nonce_field')) {
         update_option('theme_color_principal', sanitize_hex_color($_POST['color_principal']));
@@ -68,6 +74,12 @@ function configuraciones_page() {
         echo '<div class="updated"><p>Colores guardados correctamente.</p></div>';
     }
 
+    // Handle custom.css reset
+    if (isset($_POST['reset_custom_css']) && check_admin_referer('reset_custom_css_nonce', 'reset_custom_css_nonce_field')) {
+        reset_custom_css();
+        echo '<div class="updated"><p>Archivo custom.css eliminado y colores restablecidos a los valores predeterminados.</p></div>';
+    }
+
     // Get current logo
     $logo_id = get_option('theme_logo');
     $logo_url = $logo_id ? wp_get_attachment_url($logo_id) : '';
@@ -77,8 +89,10 @@ function configuraciones_page() {
     $color_secundario = get_option('theme_color_secundario', '#ffffff');
     $color_base = get_option('theme_color_base', '#cccccc');
 
-    // URL to view the custom.css file
-    $custom_css_url = get_template_directory_uri() . '/css/custom.css';
+    // Check if custom.css exists
+    $css_file_path = get_template_directory() . '/css/custom.css';
+    $custom_css_exists = file_exists($css_file_path);
+    $custom_css_url = $custom_css_exists ? get_template_directory_uri() . '/css/custom.css' : '';
 
     // Display form
     ?>
@@ -99,6 +113,11 @@ function configuraciones_page() {
             <p id="save_logo_button_container" style="display: none;">
                 <input type="submit" name="submit_logo" class="button button-primary" value="Guardar Logotipo">
             </p>
+            <?php if ($logo_url): ?>
+                <p>
+                    <input type="submit" name="remove_logo" class="button button-secondary" style="background-color: #d9534f; color: white;" value="Eliminar Logotipo">
+                </p>
+            <?php endif; ?>
         </fieldset>
     </form>
     <form method="POST">
@@ -120,7 +139,18 @@ function configuraciones_page() {
             <p><input type="submit" name="submit_colors" class="button button-primary" value="Guardar Colores"></p>
         </fieldset>
     </form>
-    <p><a href="<?php echo esc_url($custom_css_url); ?>" target="_blank" class="button">Ver custom.css</a></p>
+    <?php if ($custom_css_exists): ?>
+        <form method="POST">
+            <?php wp_nonce_field('reset_custom_css_nonce', 'reset_custom_css_nonce_field'); ?>
+            <fieldset>
+                <legend><strong>Restablecer Archivo CSS:</strong></legend>
+                <p>
+                    <input type="submit" name="reset_custom_css" class="button button-secondary" style="background-color: #d9534f; color: white;" value="Eliminar custom.css">
+                </p>
+            </fieldset>
+        </form>
+        <p><a href="<?php echo esc_url($custom_css_url); ?>" target="_blank" class="button">Ver custom.css</a></p>
+    <?php endif; ?>
     <script>
         jQuery(document).ready(function($) {
             let mediaUploader;
@@ -216,6 +246,13 @@ function generate_dynamic_css() {
     .gform_wrapper .gform_footer button {
         background-color: var(--color-principal);
     }
+
+    body footer {
+        background-color: var(--color-secundario);
+    }
+    html body {
+        background-color: var(--color-base);
+    }
     ";
 
     $css_dir = get_template_directory() . '/css';
@@ -241,6 +278,20 @@ function generate_dynamic_css() {
     } else {
         error_log("Success: custom.css file created at {$css_file}");
     }
+}
+
+function reset_custom_css() {
+    $css_file = get_template_directory() . '/css/custom.css';
+
+    // Check if the file exists and delete it
+    if (file_exists($css_file)) {
+        unlink($css_file);
+    }
+
+    // Reset colors to default values
+    update_option('theme_color_principal', '#674ea7'); // Default purple
+    update_option('theme_color_secundario', '#000000'); // Default black
+    update_option('theme_color_base', '#cccccc'); // Default grey
 }
 
 function enqueue_custom_css_if_exists() {

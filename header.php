@@ -38,6 +38,12 @@
 			</a>
 		</div>
 
+		<div class="header-widget-area">
+			<?php if ( is_active_sidebar( 'header-widget' ) ) : ?>
+				<?php dynamic_sidebar( 'header-widget' ); ?>
+			<?php endif; ?>
+		</div>
+
 	</div>
 
 	<nav>
